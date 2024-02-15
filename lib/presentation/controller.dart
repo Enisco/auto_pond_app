@@ -1,14 +1,18 @@
-// ignore_for_file: depend_on_referenced_packages
+// ignore_for_file: depend_on_referenced_packages, avoid_print
 
 import 'dart:async';
 import 'dart:io';
 
+import 'package:auto_pond_app/services/local_notif_services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 class AutoPondController extends GetxController {
+  LocalNotificationServices localNotificationServices =
+      LocalNotificationServices();
+
   var receivedMessage = '0';
   double? temperature, tds;
   bool isChangingWater = false, isPumpingIn = false, isPumpingOut = false;
@@ -29,8 +33,8 @@ class AutoPondController extends GetxController {
   final builder = MqttClientPayloadBuilder();
   String pubTopic = 'peesam/ayomega/app/pond';
   String subTopic = 'peesam/ayomega/pond/app';
-  bool snoozeNotification = false, shouldSnooze = false;
-  DateTime snoozeTime = DateTime.now();
+  // bool snoozeNotification = false, shouldSnooze = false;
+  // DateTime snoozeTime = DateTime.now();
 
   /// Functions
   Future<void> mqttConnect() async {
@@ -97,6 +101,31 @@ class AutoPondController extends GetxController {
           print(
             " >>>>>>> isPumpingIn: $isPumpingIn, isPumpingOut: $isPumpingOut, temperature: $temperature, tds: $tds ",
           );
+
+          if (temperature != null && temperature! > 82.0) {
+            print("Overtemperature");
+            localNotificationServices.showNotification(
+              title: "Warning",
+              message: "Overtemperature: $temperature",
+            );
+            update();
+            print('Full: temperature $temperature is greater than 82F');
+          } else {
+            print('temperature is less than 82');
+          }
+
+          if (tds != null && tds! > 450.0) {
+            print("TDS is now toxic");
+            localNotificationServices.showNotification(
+              title: "Warning",
+              message: "TDS has exceeded 450 ppm, Changing water now!",
+            );
+            update();
+            print('Full: tds $tds is greater than 450 ppm');
+          } else {
+            print('tds is less than 450');
+          }
+
           update();
         }) ??
         client.published?.listen((MqttPublishMessage message) {
